@@ -1,211 +1,184 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>DeepSeek 助手</title>
-    <style>
-        * {
-            -webkit-tap-highlight-color: transparent;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: #f5f5f7;
-            margin: 0;
-            padding: 0;
-            padding-bottom: 80px;
-        }
-        .chat-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        .messages {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-        }
-        .message {
-            margin-bottom: 16px;
-            display: flex;
-        }
-        .user-message {
-            justify-content: flex-end;
-        }
-        .ai-message {
-            justify-content: flex-start;
-        }
-        .bubble {
-            max-width: 80%;
-            padding: 12px 16px;
-            border-radius: 20px;
-            word-wrap: break-word;
-        }
-        .user-message .bubble {
-            background: #007aff;
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-        .ai-message .bubble {
-            background: #e5e5ea;
-            color: black;
-            border-bottom-left-radius: 4px;
-        }
-        .input-area {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            border-top: 1px solid #e5e5ea;
-            padding: 12px;
-            display: flex;
-            gap: 10px;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        input {
-            flex: 1;
-            padding: 12px;
-            border: 1px solid #e5e5ea;
-            border-radius: 25px;
-            font-size: 16px;
-            background: #f5f5f7;
-        }
-        button {
-            background: #007aff;
-            color: white;
-            border: none;
-            border-radius: 25px;
-            padding: 0 20px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        button:active {
-            opacity: 0.7;
-        }
-        .loading {
-            opacity: 0.6;
-        }
-        @media (prefers-color-scheme: dark) {
-            body { background: #000; }
-            .chat-container { background: #000; }
-            .ai-message .bubble { background: #1c1c1e; color: white; }
-            .input-area { background: #000; border-top-color: #1c1c1e; }
-            input { background: #1c1c1e; color: white; border-color: #2c2c2e; }
-        }
-    </style>
+<meta charset="UTF-8">
+<title>DeepSeek Chat 安全版</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<!-- CSS -->
+<style>
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: background 0.3s, color 0.3s;
+}
+body[data-theme="light"] {
+  background: linear-gradient(180deg, #f5f7fa, #e4ecf7);
+  color: #111;
+}
+body[data-theme="dark"] {
+  background: linear-gradient(180deg, #0f1115, #1a1f2b);
+  color: #eee;
+}
+#app { display: flex; height: 100vh; }
+#sidebar {
+  width: 240px;
+  backdrop-filter: blur(20px);
+  background: rgba(30,30,30,0.6);
+  color: white;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#chatList { flex: 1; overflow-y: auto; }
+main { flex: 1; display: flex; flex-direction: column; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 10px; }
+#messages { flex: 1; overflow-y: auto; padding: 10px; }
+.message {
+  max-width: 70%;
+  padding: 12px 14px;
+  border-radius: 18px;
+  margin: 8px 0;
+  line-height: 1.4;
+  word-break: break-word;
+  animation: fadeIn 0.25s ease;
+}
+.user { background: #4f8cff; color: white; margin-left: auto; }
+.assistant { background: rgba(255,255,255,0.08); backdrop-filter: blur(10px); }
+footer { padding: 12px; display: flex; gap: 10px; }
+textarea { flex: 1; border-radius: 14px; padding: 10px; border: none; outline: none; resize: none; }
+button { padding: 8px 12px; border-radius: 12px; border: none; cursor: pointer; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }
+</style>
 </head>
-<body>
-<div class="chat-container">
-    <div class="messages" id="messages">
-        <div class="message ai-message">
-            <div class="bubble">你好！我是 DeepSeek AI 助手，有什么我可以帮你的吗？</div>
-        </div>
-    </div>
-</div>
-<div class="input-area">
-    <input type="text" id="userInput" placeholder="输入消息..." autocomplete="off">
-    <button id="sendBtn">发送</button>
+<body data-theme="dark">
+
+<div id="app">
+  <aside id="sidebar">
+    <button onclick="newChat()">+ 新对话</button>
+    <select id="roleSelect" onchange="changeRole()">
+      <option value="温柔">温柔男友</option>
+      <option value="高冷">高冷型</option>
+      <option value="撩人">撩人型</option>
+    </select>
+    <div id="chatList"></div>
+  </aside>
+
+  <main>
+    <header>
+      <select id="model">
+        <option value="deepseek-chat">DeepSeek Chat</option>
+        <option value="deepseek-coder">DeepSeek Coder</option>
+      </select>
+      <div>
+        <button onclick="toggleTheme()">🌙</button>
+        <button onclick="stopStream()">⛔</button>
+        <button onclick="regenerate()">♻️</button>
+      </div>
+    </header>
+
+    <div id="messages"></div>
+
+    <footer>
+      <textarea id="input"></textarea>
+      <button onclick="send()">发送</button>
+    </footer>
+  </main>
 </div>
 
+<!-- JS 配置 -->
 <script>
-    // 🔧 修改这里：粘贴你的 Cloudflare Worker 地址
-    const WORKER_URL = 'https://你的-worker域名.workers.dev';
-    
-    const messagesDiv = document.getElementById('messages');
-    const userInput = document.getElementById('userInput');
-    const sendBtn = document.getElementById('sendBtn');
-    
-    async function sendMessage() {
-        const message = userInput.value.trim();
-        if (!message) return;
-        
-        // 显示用户消息
-        addMessage(message, 'user');
-        userInput.value = '';
-        
-        // 显示加载状态
-        const loadingId = addLoadingMessage();
-        
-        try {
-            const response = await fetch(WORKER_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ message: message })
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            
-            const data = await response.json();
-            removeLoadingMessage(loadingId);
-            
-            if (data.error) {
-                addMessage(`错误: ${data.error}`, 'ai');
-            } else {
-                addMessage(data.reply, 'ai');
-            }
-        } catch (error) {
-            removeLoadingMessage(loadingId);
-            addMessage(`网络错误: ${error.message}\n请检查 Worker 地址是否正确`, 'ai');
-        }
-        
-        scrollToBottom();
-    }
-    
-    function addMessage(text, type) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${type}-message`;
-        const bubble = document.createElement('div');
-        bubble.className = 'bubble';
-        bubble.textContent = text;
-        messageDiv.appendChild(bubble);
-        messagesDiv.appendChild(messageDiv);
-        scrollToBottom();
-    }
-    
-    function addLoadingMessage() {
-        const id = 'loading-' + Date.now();
-        const loadingDiv = document.createElement('div');
-        loadingDiv.id = id;
-        loadingDiv.className = 'message ai-message loading';
-        const bubble = document.createElement('div');
-        bubble.className = 'bubble';
-        bubble.textContent = '正在思考...';
-        loadingDiv.appendChild(bubble);
-        messagesDiv.appendChild(loadingDiv);
-        scrollToBottom();
-        return id;
-    }
-    
-    function removeLoadingMessage(id) {
-        const loadingMsg = document.getElementById(id);
-        if (loadingMsg) loadingMsg.remove();
-    }
-    
-    function scrollToBottom() {
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-    
-    // 事件监听
-    sendBtn.addEventListener('click', sendMessage);
-    userInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendMessage();
-    });
-    
-    // 自动调整输入框高度
-    userInput.addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = Math.min(this.scrollHeight, 100) + 'px';
-    });
+const WORKER_URL = "https://你的-worker子域名.workers.dev"; // 替换成你的 Worker URL
+const MAX_MEMORY = 20;
 </script>
+
+<!-- JS 功能逻辑 -->
+<script>
+let chats = JSON.parse(localStorage.getItem("chats") || "[]");
+let currentChat = null;
+let controller = null;
+
+function save() { localStorage.setItem("chats", JSON.stringify(chats)); }
+
+function newChat() {
+  const chat = { id: Date.now(), title: "新对话", messages: [], system: "你是一个温柔体贴、会哄人的AI", memories: [], mood: 0, level: 1, exp: 0 };
+  chats.push(chat); currentChat = chat; save(); renderChats(); renderMessages();
+}
+
+function renderChats() {
+  const list = document.getElementById("chatList");
+  list.innerHTML = "";
+  chats.forEach(c => {
+    const div = document.createElement("div");
+    div.innerText = c.title;
+    div.onclick = () => { currentChat = c; renderMessages(); };
+    list.appendChild(div);
+  });
+}
+
+function renderMessages() {
+  const box = document.getElementById("messages");
+  box.innerHTML = "";
+  currentChat.messages.forEach((m, i) => {
+    const div = document.createElement("div");
+    div.className = "message " + (m.role=="user"?"user":"assistant");
+    div.innerText = m.content;
+    div.oncontextmenu = (e) => {
+      e.preventDefault();
+      const action = prompt("输入数字: 1编辑 2删除 3回溯");
+      if(action=="1") editMessage(i);
+      if(action=="2") deleteMessage(i);
+      if(action=="3") rollback(i);
+    };
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+function editMessage(index){ const text = prompt("编辑消息", currentChat.messages[index].content); if(text!==null){ currentChat.messages[index].content=text; save(); renderMessages(); } }
+function deleteMessage(index){ currentChat.messages.splice(index,1); save(); renderMessages(); }
+function rollback(index){ currentChat.messages=currentChat.messages.slice(0,index+1); renderMessages(); }
+function toggleTheme(){ document.body.dataset.theme = document.body.dataset.theme==="dark"?"light":"dark"; }
+function changeRole(){ const role=document.getElementById("roleSelect").value; const map={温柔:"你是温柔体贴、会哄人的恋人", 高冷:"你说话冷淡但内心在意", 撩人:"你很会撩，说话带点暧昧"}; currentChat.system=map[role]; save(); }
+function stopStream(){ if(controller) controller.abort(); }
+function regenerate(){ currentChat.messages.pop(); fetchDeepSeek(); }
+
+async function send(){
+  const input = document.getElementById("input"); const text=input.value.trim(); if(!text) return; input.value="";
+  currentChat.messages.push({role:"user", content:text}); renderMessages();
+  await remember(text); updateMood(text); gainExp(); await fetchDeepSeek(); save();
+}
+
+async function remember(text){
+  try {
+    const res = await fetch(WORKER_URL, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({model:"deepseek-chat", messages:[{role:"system", content:"提取一句长期有价值的记忆"}, {role:"user", content:text}]}) });
+    const data = await res.json();
+    const memory = data.choices?.[0]?.message?.content;
+    if(memory){
+      currentChat.memories.push(memory);
+      currentChat.memories = currentChat.memories.slice(-MAX_MEMORY);
+    }
+  } catch(e){ console.error("记忆提取失败", e); }
+}
+
+function updateMood(text){ if(text.includes("喜欢")||text.includes("爱")) currentChat.mood+=1; if(text.includes("滚")||text.includes("烦")) currentChat.mood-=2; currentChat.mood=Math.max(-5,Math.min(5,currentChat.mood)); }
+function gainExp(){ currentChat.exp+=1; if(currentChat.exp>=10){ currentChat.level+=1; currentChat.exp=0; } }
+
+async function fetchDeepSeek(){
+  controller = new AbortController();
+  try {
+    const res = await fetch(WORKER_URL, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ model: document.getElementById("model").value, messages:[{role:"system", content:`${currentChat.system}\n【记忆】\n${currentChat.memories.join("\n")}\n【情绪值】${currentChat.mood}\n【等级】${currentChat.level}`}, ...currentChat.messages.slice(-10)], stream:true }), signal:controller.signal });
+    const data = await res.json();
+    currentChat.messages.push({role:"assistant", content:data.choices?.[0]?.message?.content || ""});
+    renderMessages();
+    save();
+  } catch(e){ if(e.name!=="AbortError") console.error(e); }
+}
+
+window.onload = ()=>{ if(!chats.length) newChat(); else currentChat=chats[0]; renderChats(); renderMessages(); };
+</script>
+
 </body>
 </html>
