@@ -2,235 +2,193 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>DeepSeek iOS 完整版</title>
-<style>
-/* ===== 基础布局 ===== */
-body, html {
-  margin: 0; padding: 0; height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background: #1e1e1e; color: #f2f2f7;
-}
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepSeek Chat</title>
 
-#app {
-  display: flex; height: 100vh; overflow: hidden;
-}
+<style>
+body{margin:0;font-family:-apple-system;background:#0f1115;color:#fff}
+body.light{background:#f5f7fa;color:#111}
+
+#app{display:flex;height:100vh}
 
 /* 侧边栏 */
-#sidebar {
-  width: 240px; background: #2c2c2e; display: flex; flex-direction: column; overflow-y: auto; padding: 8px;
+#sidebar{
+  width:240px;background:#1a1f2b;
+  display:flex;flex-direction:column;padding:10px;gap:8px
 }
 
-#chatList { display: flex; flex-direction: column; gap: 8px; }
-#chatList div {
-  padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1); cursor: pointer; word-break: break-word;
+#chatList{flex:1;overflow:auto}
+#chatList div{
+  padding:8px;border-radius:8px;background:#2a3142;margin-bottom:6px
 }
 
-/* 主聊天区 */
-main { flex:1; display:flex; flex-direction:column; padding:8px; overflow:hidden; }
-#messages { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:4px; padding-bottom:8px; }
-.message { padding:8px 12px; border-radius:16px; word-break:break-word; line-height:1.4; max-width:70%; }
-.message.user { background:#0a84ff; color:white; align-self:flex-end; }
-.message.ds { background:#2c2c2e; color:#f2f2f7; align-self:flex-start; }
-.message.editing { outline:1px solid #0a84ff; }
+/* 主区 */
+main{flex:1;display:flex;flex-direction:column}
+header{display:flex;justify-content:space-between;padding:10px}
+#messages{flex:1;overflow:auto;padding:10px}
+.message{padding:10px;border-radius:16px;margin:6px 0;max-width:75%}
+.user{background:#4f8cff;margin-left:auto}
+.ds{background:#2a3142}
 
-/* 输入区 */
-footer { display:flex; gap:6px; padding:6px; }
-textarea { flex:1; font-size:16px; padding:6px; border-radius:6px; resize:none; outline:none; }
-button { padding:10px; border-radius:6px; background:#0a84ff; color:white; border:none; cursor:pointer; }
+footer{display:flex;padding:10px;gap:6px}
+textarea{flex:1;border-radius:10px;padding:8px}
+button{border:none;border-radius:8px;padding:8px}
 
-/* 日夜模式切换 */
-body.dark { background:#1e1e1e; color:#f2f2f7; }
-body.dark #sidebar { background:#2c2c2e; }
-body.light { background:#f2f2f7; color:#1e1e1e; }
-body.light #sidebar { background:#ddd; }
-
-/* ===== 手机优化 ===== */
-@media (max-width:768px){
-  #app { flex-direction:column; height:100vh; }
-  #sidebar { width:100%; height:auto; flex-direction:row; overflow-x:auto; padding:4px 0; }
-  #chatList { display:flex; gap:8px; overflow-x:auto; padding:0 8px; }
-  #chatList div { min-width:80px; padding:6px 10px; flex-shrink:0; text-align:center; }
-  main { flex:1; padding:8px; overflow-y:auto; }
-  #messages { padding:4px; }
-  .message { max-width:90%; font-size:14px; }
-  footer { flex-direction:column; gap:6px; padding:6px; }
-  textarea, button { width:100%; font-size:16px; min-height:40px; }
+/* 手机适配 */
+@media(max-width:768px){
+  #app{flex-direction:column}
+  #sidebar{width:100%;flex-direction:row;overflow:auto}
 }
-
-/* 滚动平滑 */
-#messages { scroll-behavior:smooth; }
 </style>
 </head>
-<body class="dark">
+
+<body>
 <div id="app">
-  <div id="sidebar">
-    <button id="toggleTheme">切换日夜</button>
-    <select id="modelSelect">
-      <option value="default">默认模型</option>
-      <option value="advanced">高级模型</option>
-    </select>
-    <div id="chatList"></div>
-    <button id="newChat">新会话</button>
-    <button id="deleteChat">删除会话</button>
-  </div>
-  <main>
-    <div id="messages"></div>
-    <footer>
-      <textarea id="input" placeholder="输入消息..."></textarea>
-      <button id="send">发送</button>
-      <button id="stop">停止</button>
-    </footer>
-  </main>
+
+<aside id="sidebar">
+<button onclick="newChat()">+新对话</button>
+
+<select id="role">
+<option value="温柔恋人">温柔恋人</option>
+<option value="高冷">高冷</option>
+<option value="撩人">撩人</option>
+</select>
+
+<select id="model">
+<option value="deepseek-chat">chat</option>
+<option value="deepseek-coder">coder</option>
+</select>
+
+<button onclick="toggleTheme()">🌙</button>
+
+<div id="chatList"></div>
+
+<button onclick="deleteChat()">删除对话</button>
+</aside>
+
+<main>
+<header>
+<button onclick="regen()">重新生成</button>
+<button onclick="stop()">停止</button>
+</header>
+
+<div id="messages"></div>
+
+<footer>
+<textarea id="input"></textarea>
+<button onclick="send()">发送</button>
+</footer>
+
+</main>
 </div>
 
 <script>
-// 替换成你的 Worker URL
-const WORKER_URL = "https://story.3613530694.workers.dev/";
+const WORKER_URL="https://story.3613530694.workers.dev/";
 
-let sessions = JSON.parse(localStorage.getItem("sessions") || "{}");
-let currentChatId = Object.keys(sessions)[0] || createNewChat();
-let memoryLimit = 10;
-let controller = null;
+let chats=JSON.parse(localStorage.getItem("chats")||"[]");
+let current=null;
+let controller=null;
+let MAX_MEMORY=10;
 
-const sidebar = document.getElementById("chatList");
-const messagesDiv = document.getElementById("messages");
-const input = document.getElementById("input");
-const sendBtn = document.getElementById("send");
-const stopBtn = document.getElementById("stop");
-const newChatBtn = document.getElementById("newChat");
-const deleteChatBtn = document.getElementById("deleteChat");
-const toggleThemeBtn = document.getElementById("toggleTheme");
-const modelSelect = document.getElementById("modelSelect");
+function save(){localStorage.setItem("chats",JSON.stringify(chats))}
 
-// ===== 会话管理 =====
-function saveSessions(){ localStorage.setItem("sessions", JSON.stringify(sessions)); }
-
-function createNewChat(){
-  const id = "chat_"+Date.now();
-  sessions[id]={messages:[], system:"默认角色", model:"default"};
-  saveSessions(); updateSidebar(); loadChat(id);
-  return id;
+function newChat(){
+let c={id:Date.now(),messages:[],system:"你是"+role.value};
+chats.push(c);current=c;save();renderChats();render()
 }
 
-function deleteCurrentChat(){
-  if(confirm("确认删除当前会话？")){
-    delete sessions[currentChatId];
-    const keys = Object.keys(sessions);
-    currentChatId = keys[0] || createNewChat();
-    saveSessions();
-    updateSidebar();
-    loadChat(currentChatId);
-  }
+function deleteChat(){
+chats=chats.filter(c=>c!==current);
+current=chats[0];save();renderChats();render()
 }
 
-function updateSidebar(){
-  sidebar.innerHTML="";
-  Object.keys(sessions).forEach(id=>{
-    const div=document.createElement("div");
-    div.textContent = sessions[id].system;
-    div.onclick=()=>loadChat(id);
-    if(id===currentChatId) div.style.fontWeight="bold";
-    sidebar.appendChild(div);
-  });
+function renderChats(){
+chatList.innerHTML="";
+chats.forEach(c=>{
+let d=document.createElement("div");
+d.innerText=c.system;
+d.onclick=()=>{current=c;render()}
+chatList.appendChild(d)
+})
 }
 
-function loadChat(id){
-  currentChatId=id;
-  const chat=sessions[id];
-  modelSelect.value=chat.model||"default";
-  renderMessages();
-  updateSidebar();
+function render(){
+messages.innerHTML="";
+current.messages.forEach((m,i)=>{
+let d=document.createElement("div");
+d.className="message "+(m.role=="user"?"user":"ds");
+d.innerText=m.content;
+
+d.oncontextmenu=e=>{
+e.preventDefault();
+let a=prompt("1编辑 2删除 3回溯");
+if(a==1){edit(i)}
+if(a==2){current.messages.splice(i,1);render()}
+if(a==3){current.messages=current.messages.slice(0,i+1);render()}
 }
 
-function renderMessages(){
-  messagesDiv.innerHTML="";
-  const chat=sessions[currentChatId];
-  chat.messages.forEach((msg,i)=>{
-    const div=document.createElement("div");
-    div.className="message "+msg.role;
-    div.textContent=msg.content;
-    div.onclick=()=>editMessage(i);
-    messagesDiv.appendChild(div);
-  });
-  messagesDiv.scrollTop=messagesDiv.scrollHeight;
+messages.appendChild(d)
+})
+messages.scrollTop=99999
 }
 
-function editMessage(index){
-  const chat=sessions[currentChatId];
-  const newContent=prompt("编辑消息内容", chat.messages[index].content);
-  if(newContent!==null){
-    chat.messages[index].content=newContent;
-    saveSessions();
-    renderMessages();
-  }
+function edit(i){
+let t=prompt("编辑",current.messages[i].content);
+if(t){current.messages[i].content=t;render()}
 }
 
-// ===== 发送消息 =====
-async function sendMessage(){
-  const text=input.value.trim();
-  if(!text) return;
-  const chat=sessions[currentChatId];
-  chat.messages.push({role:"user",content:text});
-  if(chat.messages.length>memoryLimit) chat.messages.splice(0,chat.messages.length-memoryLimit);
-  renderMessages();
-  input.value="";
-  
-  if(controller) controller.abort();
-  controller = new AbortController();
-  try{
-    const res = await fetch(WORKER_URL,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({messages:[...chat.messages],model:modelSelect.value}),
-      signal: controller.signal
-    });
-    const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content || "出错啦";
-    chat.messages.push({role:"ds",content:reply});
-    renderMessages();
-    saveSessions();
-  }catch(e){
-    if(e.name==="AbortError"){ addTempMessage("已停止"); }
-    else addTempMessage("请求失败");
-  }
+function toggleTheme(){
+document.body.classList.toggle("light")
 }
 
-function addTempMessage(msg){
-  const div=document.createElement("div");
-  div.className="message ds";
-  div.textContent=msg;
-  messagesDiv.appendChild(div);
-  messagesDiv.scrollTop=messagesDiv.scrollHeight;
+function stop(){if(controller)controller.abort()}
+
+function regen(){
+current.messages.pop();
+fetchDS()
 }
 
-// ===== 停止流式 =====
-stopBtn.onclick=()=>{ if(controller) controller.abort(); }
+async function send(){
+let text=input.value.trim();
+if(!text)return;
+input.value="";
+current.messages.push({role:"user",content:text});
+current.messages=current.messages.slice(-MAX_MEMORY);
+render();
+fetchDS();
+}
 
-// ===== 按钮绑定 =====
-sendBtn.onclick=sendMessage;
-input.addEventListener("keydown",e=>{
-  if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendMessage(); }
+async function fetchDS(){
+controller=new AbortController();
+
+let res=await fetch(WORKER_URL,{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+model:model.value,
+messages:[
+{role:"system",content:current.system},
+...current.messages
+]
+}),
+signal:controller.signal
 });
-newChatBtn.onclick=createNewChat;
-deleteChatBtn.onclick=deleteCurrentChat;
 
-// ===== 日夜模式切换 =====
-toggleThemeBtn.onclick=()=>{
-  document.body.classList.toggle("dark");
-  document.body.classList.toggle("light");
+let data=await res.json();
+
+current.messages.push({
+role:"assistant",
+content:data.choices?.[0]?.message?.content||"error"
+});
+
+render();save()
 }
 
-// ===== 模型选择 =====
-modelSelect.onchange=()=>{
-  sessions[currentChatId].model=modelSelect.value;
-  saveSessions();
+window.onload=()=>{
+if(!chats.length)newChat();
+else current=chats[0];
+renderChats();render()
 }
-
-// ===== 初始化 =====
-updateSidebar();
-loadChat(currentChatId);
-
 </script>
 </body>
 </html>
